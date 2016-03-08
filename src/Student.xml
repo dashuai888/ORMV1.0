@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding = "UTF-8"?>
+<mapping>
+    <class name ="Students" table="students">
+        <property name="sid" column="sid"/>
+        <property name="sname" column="sname"/>
+    </class>
+</mapping>
