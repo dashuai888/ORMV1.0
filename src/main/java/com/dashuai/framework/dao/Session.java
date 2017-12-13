@@ -1,23 +1,23 @@
-package dao;
+package com.dashuai.framework.dao;
 
+import com.dashuai.framework.common.Constants;
+import com.dashuai.framework.common.util.ParseProCfg;
+import com.dashuai.framework.vo.Students;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import vo.Students;
 
-import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Session
@@ -41,21 +41,18 @@ public class Session {
     private String tableName;
 
     /**
-     * 保存类的方法:暂时只村get方法，使能用反射机制调用
+     * 保存类的方法:暂时只存get方法，使能用反射机制调用
      */
     private String[] methodNames;
 
-    /**
-     * 使用dom4j解析xml文件
-     */
     private Session() {
-
         SAXReader saxReader = new SAXReader();
-        File file = new File(System.getProperty("user.dir") + File.separator + "src" + File.separator + "Student.xml");
+        URL confFile = Session.class.getClassLoader().getResource("Student.xml");
 
         try {
             // 解析为DOC文档对象
-            Document document = saxReader.read(file);
+            String path = Optional.ofNullable(confFile).map(URL::getFile).orElse("");
+            Document document = saxReader.read(path);
             // 获得配置文件的root节点
             Element rootElement = document.getRootElement();
             // 获得root的子节点集合list
@@ -69,7 +66,7 @@ public class Session {
                 List list1 = nodeElement.elements();
 
                 for (Object object : list1) {
-                    Element node = (Element)object;
+                    Element node = (Element) object;
                     // 保存类的属性和数据库字段
                     stringStringMap.put(node.attributeValue("name"), node.attributeValue("column"));
                 }
@@ -82,8 +79,13 @@ public class Session {
         }
     }
 
+    public static Session newInstance() {
+        return new Session();
+    }
+
     /**
      * 拼接insert into students (sid,sname) values (?,?);
+     *
      * @return String
      */
     private String createSQL() {
@@ -117,18 +119,19 @@ public class Session {
      * 封装JDBC
      *
      * @param students Students
-     * @param sql String
+     * @param sql      String
      */
     private void excuteJdbc(Students students, String sql) {
         // 简单的封装JDBC
         Connection connection = null;
         PreparedStatement preparedStatement = null;
-        String url = "jdbc:mysql://localhost:3306/bbs";
-        String password = "123";
-        String username = "root";
+        Properties properties = ParseProCfg.INSTANCE.parseFile();
+        String url = "jdbc:mysql://" + properties.getProperty("dashuaiFramework.database.url", Constants.DefaultJDBCUrl.valueOf());
+        String password = properties.getProperty("dashuaiFramework.database.password");
+        String username = properties.getProperty("dashuaiFramework.database.username");
 
         try {
-            Class.forName("com.mysql.jdbc.Driver");
+            Class.forName(properties.getProperty("dashuaiFramework.jdbc"));
             connection = DriverManager.getConnection(url, username, password);
             preparedStatement = connection.prepareStatement(sql);
 
@@ -182,6 +185,7 @@ public class Session {
 
     /**
      * 保存对象到数据库
+     *
      * @param students Students
      */
     public void save(Students students) {
@@ -189,9 +193,5 @@ public class Session {
         String sql = createSQL();
         LOG.info("SQL: {}", sql);
         excuteJdbc(students, sql);
-    }
-
-    public static Session newInstance() {
-        return new Session();
     }
 }

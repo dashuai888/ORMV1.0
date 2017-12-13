@@ -1,7 +1,7 @@
-package vo;
+package com.dashuai.framework.vo;
 
 /**
- * vo.Students
+ * Students
  *
  * @author Wang Yishuai.
  * @date 2016/3/8 0008.
